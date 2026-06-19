@@ -21,19 +21,10 @@
 
 ## 前置要求
 
-1. 一台运行中的 Hermes Agent 实例（本地或远程服务器）
-2. Hermes 已启用 API Server 平台：
+1. 一台运行中的 Hermes Agent 实例（Linux / macOS / WSL）
+2. Hermes 已启用 API Server 平台
 
-```yaml
-# ~/.hermes/config.yaml
-platforms:
-  api_server:
-    enabled: true
-    extra:
-      host: 0.0.0.0
-      port: 8642
-      key: your_api_key_here
-```
+在 Hermes 服务器上执行：
 
 ```bash
 hermes config set platforms.api_server.enabled true
@@ -41,6 +32,18 @@ hermes config set platforms.api_server.extra.host 0.0.0.0
 hermes config set platforms.api_server.extra.port 8642
 hermes config set platforms.api_server.extra.key YOUR_KEY
 systemctl --user restart hermes-gateway
+```
+
+对应的配置文件 `~/.hermes/config.yaml`：
+
+```yaml
+platforms:
+  api_server:
+    enabled: true
+    extra:
+      host: 0.0.0.0      # 必须设 0.0.0.0，不能是 127.0.0.1
+      port: 8642
+      key: your_api_key_here
 ```
 
 ## 安装
@@ -52,7 +55,7 @@ systemctl --user restart hermes-gateway
 ### 方式二：自行编译
 
 ```bash
-git clone https://github.com/你的用户名/hermes_controller.git
+git clone https://github.com/mczf/hermes_controller.git
 cd hermes_controller
 
 # 需要 Flutter 3.12+ 和 Java 17
@@ -66,11 +69,75 @@ flutter build apk --release
 # 产物：build/app/outputs/flutter-apk/app-release.apk
 ```
 
+## 连接方式
+
+App 登录页需要填写服务器地址、端口和 API Key。根据你的网络环境选择对应方式：
+
+### 局域网（手机和 Hermes 在同一 WiFi）
+
+最简单的方式，适合家里或办公室使用。
+
+1. 在 Hermes 服务器上查看局域网 IP：
+   ```bash
+   ip addr | grep "inet " | grep -v 127.0.0.1
+   # 例如得到 192.168.1.100
+   ```
+2. 确保 API Server 监听 `0.0.0.0`（上一步已设置）
+3. 手机连同一个 WiFi，App 里填：
+   - 服务器地址：`192.168.1.100`（替换为你的实际 IP）
+   - 端口：`8642`
+   - API Key：你设置的 key
+
+> 注意：如果 Hermes 服务器开了防火墙，需要放行 8642 端口：
+> ```bash
+> sudo ufw allow 8642/tcp
+> ```
+
+### 公共网络 — 有公网 IP
+
+适合 Hermes 服务器部署在云服务器（阿里云、腾讯云等）上，有固定公网 IP。
+
+1. 在云服务器安全组 / 防火墙中放行 8642 端口
+2. App 里填：
+   - 服务器地址：`47.253.46.20`（替换为你的公网 IP）
+   - 端口：`8642`
+   - API Key：你设置的 key
+
+> 安全建议：公共网络下 API Key 以明文 HTTP 传输，建议配合 Nginx 反向代理加 HTTPS，或使用下面的 Tailscale 方案。
+
+### 公共网络 — 无公网 IP
+
+适合 Hermes 在家里电脑上跑，没有公网 IP，但想在外面用手机控制。
+
+推荐使用 [Tailscale](https://tailscale.com/)，免费版够用，无需公网 IP、无需端口转发。
+
+1. 在 Hermes 服务器上安装 Tailscale：
+   ```bash
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
+   # 记住显示的 IP，例如 100.64.0.3
+   ```
+2. 在手机上安装 Tailscale（Google Play 或官网下载 APK）
+3. 手机和服务器登录**同一个** Tailscale 账号
+4. App 里填：
+   - 服务器地址：`100.64.0.3`（替换为你的 Tailscale IP）
+   - 端口：`8642`
+   - API Key：你设置的 key
+
+Tailscale 的流量是端到端加密的，比裸 HTTP 暴露在公网安全得多。
+
+### 其他内网穿透方案
+
+如果你已经用 frp、ngrok、Cloudflare Tunnel 等工具，把穿透后的地址填进去即可。
+
+例如用 frp 映射到 `your-domain.com:8642`，App 里就填：
+- 服务器地址：`your-domain.com`
+- 端口：`8642`
+
 ## 使用
 
-1. 打开 App，输入 Hermes 服务器地址和端口（默认 8642）
-2. 输入 API Server 的 Key（即配置中的 `platforms.api_server.extra.key`）
-3. 点击「连接」，成功后进入主界面
+1. 打开 App，按上方「连接方式」填写服务器地址、端口和 API Key
+2. 点击「连接」，成功后进入主界面
 
 底部三个标签页：
 
@@ -140,7 +207,9 @@ flutter run
 
 ## 许可证
 
-MIT
+CC BY-NC 4.0（知识共享 署名-非商业性使用 4.0）
+
+本作品可供个人学习、研究使用，不得用于商业目的。
 
 ## 开发者
 
