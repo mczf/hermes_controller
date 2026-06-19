@@ -1,0 +1,147 @@
+# 养码猿 (Hermes Controller)
+
+远程管控你的 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 的 Android 应用。
+
+通过直连 Hermes 内置 API Server，在手机上查看网关状态、与 AI 对话、浏览会话记录。
+
+## 功能
+
+- **状态面板** — 网关在线状态、版本、活跃 Agent 数、已连接平台数、当前模型/Provider
+- **流式对话** — 基于 SSE 实时接收 AI 回复，支持停止任务、查看工具调用过程
+- **会话记录** — 浏览历史会话，点击恢复完整对话上下文
+- **斜杠命令** — 输入 `/` 自动补全 40+ 条 Hermes 内置命令
+- **消息折叠** — 工具输出、错误信息自动折叠，点击展开
+- **分页加载** — 长会话自动分页，滚动加载更早消息
+- **自动登录** — API Key 加密存储，下次打开自动恢复连接
+- **Material 3** — 支持亮色/暗色主题，跟随系统
+
+## 截图
+
+<!-- TODO: 添加截图 -->
+
+## 前置要求
+
+1. 一台运行中的 Hermes Agent 实例（本地或远程服务器）
+2. Hermes 已启用 API Server 平台：
+
+```yaml
+# ~/.hermes/config.yaml
+platforms:
+  api_server:
+    enabled: true
+    extra:
+      host: 0.0.0.0
+      port: 8642
+      key: your_api_key_here
+```
+
+```bash
+hermes config set platforms.api_server.enabled true
+hermes config set platforms.api_server.extra.host 0.0.0.0
+hermes config set platforms.api_server.extra.port 8642
+hermes config set platforms.api_server.extra.key YOUR_KEY
+systemctl --user restart hermes-gateway
+```
+
+## 安装
+
+### 方式一：直接下载 APK
+
+从 [Releases](../../releases) 页面下载最新 APK，传输到手机安装。
+
+### 方式二：自行编译
+
+```bash
+git clone https://github.com/你的用户名/hermes_controller.git
+cd hermes_controller
+
+# 需要 Flutter 3.12+ 和 Java 17
+export PATH="$HOME/flutter/bin:$PATH"
+export FLUTTER_STORAGE_BASE_URL="https://storage.flutter-io.cn"
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+
+flutter pub get
+flutter build apk --release
+
+# 产物：build/app/outputs/flutter-apk/app-release.apk
+```
+
+## 使用
+
+1. 打开 App，输入 Hermes 服务器地址和端口（默认 8642）
+2. 输入 API Server 的 Key（即配置中的 `platforms.api_server.extra.key`）
+3. 点击「连接」，成功后进入主界面
+
+底部三个标签页：
+
+| 标签 | 功能 |
+|------|------|
+| 状态 | 网关状态、模型信息、会话统计 |
+| 对话 | 与 Hermes 实时对话，支持斜杠命令 |
+| 记录 | 浏览历史会话，点击恢复对话 |
+
+## 技术栈
+
+- **Flutter** 3.12+ (Dart)
+- **Material 3** 设计语言
+- **http** — REST API 调用 + SSE 流式接收
+- **shared_preferences** — 登录状态持久化
+- **intl** — 时间格式化
+- **file_picker** — 附件选择
+
+## 项目结构
+
+```
+lib/
+├── main.dart                      # App 入口，全局 HermesApi 单例
+├── services/
+│   ├── hermes_api.dart            # REST API 封装（健康检查、会话、配置）
+│   └── socket_service.dart        # SSE 流式对话（/v1/runs + 事件流）
+├── pages/
+│   ├── login_page.dart            # 连接配置 + 自动登录
+│   ├── home_page.dart             # 底部导航 + 双击返回退出
+│   ├── dashboard_page.dart        # 状态面板
+│   ├── chat_page.dart             # 对话页（核心）
+│   ├── sessions_page.dart         # 会话记录列表
+│   └── about_page.dart            # 关于页
+```
+
+## API Server 端点
+
+| 端点 | 方法 | 用途 |
+|------|------|------|
+| `/health` | GET | 健康检查 |
+| `/health/detailed` | GET | 网关详细状态 |
+| `/v1/capabilities` | GET | 模型/Provider 信息 |
+| `/api/sessions` | GET | 会话列表 |
+| `/api/sessions/{id}` | GET | 会话元数据 |
+| `/api/sessions/{id}/messages` | GET | 会话消息历史 |
+| `/v1/runs` | POST | 启动 AI 任务 |
+| `/v1/runs/{id}/events` | GET | SSE 事件流 |
+| `/v1/runs/{id}/stop` | POST | 停止任务 |
+
+## 开发
+
+```bash
+# 代码分析
+flutter analyze
+
+# 运行测试
+flutter test
+
+# 调试运行
+flutter run
+```
+
+## 版本历史
+
+- **V1.0.1** — 直连 Hermes API Server，SSE 流式对话，斜杠命令，会话恢复
+- **V1.0.0** — 基于 hermes-web-ui 的初始版本
+
+## 许可证
+
+MIT
+
+## 开发者
+
+微信：zymczf
